@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"html/template"
+	"encoding/gob"
 	"fmt"
 	"strings"
 	"github.com/gorilla/sessions"
@@ -19,7 +20,8 @@ var loggedIn = false
 func (s *server) handleIndex() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "session-name")
-		
+		gob.Register(map[string]string{})
+
 		session.Options = &sessions.Options{
 			Path:     "/",
 			MaxAge:   0,
@@ -38,7 +40,7 @@ func (s *server) handleIndex() http.HandlerFunc {
 				//Case for GET request
 		
 				lists := getTables()
-	
+				setSortDefaults(w,r)
 				t := template.Must(template.ParseFiles("html/loggedInIndex.html"))
 				if err := t.Execute(w, lists); err != nil {
 					 log.Fatalln(err)
@@ -93,6 +95,39 @@ func (s *server) handleIndex() http.HandlerFunc {
 		
 	}
 }
+
+func setSortDefaults(w http.ResponseWriter,r *http.Request) {
+	session, _ := store.Get(r, "session-name")
+	gob.Register(map[string]string{})
+	session.Values["loadSize"] = 100
+
+	lists := getTables()
+	if _, ok := session.Values["sort"]; ok {
+	
+	} else {
+		//here, set defaults for sort stuff
+		sortValues := make(map[string]string)
+		for _, ele := range lists {
+			// fmt.Println(ele.TblNames.Column)
+			for _,column := range ele.TblNames.Column {
+				//table is column.cat
+				// tableName := column.Cat
+				backName := column.BackName
+				sortValues[backName] = "ID,1"
+
+			}
+		}
+		
+		session.Values["sort"] = sortValues
+
+		err := session.Save(r, w)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
 func (s *server) handleLogout() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("LOGOUT TRIGGERED")
@@ -111,19 +146,23 @@ func (s *server) handleLogout() http.HandlerFunc {
 
 func (s *server) handleTableLoad() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
 		session, _ := store.Get(r, "session-name")
 		
 		if _, ok := session.Values["loggedIn"]; ok {
 			if(session.Values["loggedIn"].(bool)) {
+				// fmt.Println(session.Values["sort"])
+				//sort values in session.Values["sort"]
 				spl := strings.Split(r.URL.String(),"/")
 				typ := spl[2]
 				tName := spl[3]
 				pagNum,err := strconv.Atoi(spl[4])
 				//based on these, build the table from this info
+				sortParam := session.Values["sort"].(map[string]string)[tName]
 				tmpl := template.Must(template.ParseFiles("html/table.html"))
 				limit := session.Values["loadSize"].(int)
 
-				tbl := getTable(typ,tName,limit,pagNum)
+				tbl := getTable(typ,tName,limit,pagNum,sortParam)
 				
 				err = tmpl.Execute(w,tbl)
 				if err != nil {
@@ -146,6 +185,7 @@ func (s *server) handleTableLoad() http.HandlerFunc {
 
 func (s *server) handleNew() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
 		session, _ := store.Get(r, "session-name")
 
 		if _, ok := session.Values["loggedIn"]; ok {
@@ -158,8 +198,9 @@ func (s *server) handleNew() http.HandlerFunc {
 					tName := spl[3]
 					tmpl := template.Must(template.ParseFiles("html/newentry.html"))
 					limit := session.Values["loadSize"].(int)
+					sortParam := session.Values["sort"].(map[string]string)[tName]
 
-					tbl := getTable(typ,tName,limit,1)
+					tbl := getTable(typ,tName,limit,1,sortParam)
 					
 				
 					err := tmpl.Execute(w,tbl)
@@ -183,6 +224,7 @@ func (s *server) handleNew() http.HandlerFunc {
 }
 func (s *server) handleAdd() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
 		session, _ := store.Get(r, "session-name")
 
 		if _, ok := session.Values["loggedIn"]; ok {
@@ -243,7 +285,7 @@ func (s *server) handleAdd() http.HandlerFunc {
 
 func (s *server) handlePage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
+		setSortDefaults(w,r)
 		session, _ := store.Get(r, "session-name")
 
 		if _, ok := session.Values["loggedIn"]; ok {
@@ -275,6 +317,7 @@ func (s *server) handlePage() http.HandlerFunc {
 
 func (s *server) handleSearch() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
 		session, _ := store.Get(r, "session-name")
 		if _, ok := session.Values["loggedIn"]; ok {
 			if(session.Values["loggedIn"].(bool)) {
@@ -313,6 +356,7 @@ func (s *server) handleSearch() http.HandlerFunc {
 
 func (s *server) handleUpload() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
 		session, _ := store.Get(r, "session-name")
 
 		if _, ok := session.Values["loggedIn"]; ok {
@@ -327,6 +371,7 @@ func (s *server) handleUpload() http.HandlerFunc {
 
 func (s *server) handleDelete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
 		session, _ := store.Get(r, "session-name")
 
 		if _, ok := session.Values["loggedIn"]; ok {

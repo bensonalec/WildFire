@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
+	"strconv"
 )
 
 type topLevel struct {
@@ -159,7 +160,8 @@ func getPage(tableName string, ID string) top{
 	return out
 }
 
-func getTable(typ string,tableName string,limit int, pageNum int) topLevel {
+func getTable(typ string,tableName string,limit int, pageNum int, sortParam string) topLevel {
+	//parse sort param by comma, first split is the column to sort by, and the second split is the index of what sort
 	//retrieve the column names for that tableName
 	offset := limit * (pageNum-1)
 	
@@ -202,7 +204,31 @@ func getTable(typ string,tableName string,limit int, pageNum int) topLevel {
 	}
 	toGet += "ID\n"
 
-	boilerPlate := fmt.Sprintf("{\"query\":\"query MyQuery {%s(limit: %d, offset: %d){\n%s}" + "}\",\"variables\":{}}",tableName,limit,offset,toGet)
+	//here, set up sort logic
+	sortSplit := strings.Split(sortParam,",")
+	colSort := sortSplit[0]
+	sortIndex,_ := strconv.Atoi(sortSplit[1])
+	sortParameters := ""
+	//switch on sortIndex
+	switch sortIndex {
+	case 0:
+		//no sort
+		sortParameters = ""
+	case 1:
+		//ascending sort
+		sortParameters = fmt.Sprintf("order_by: {%s: asc},",colSort)
+	case 2:
+		//descending sort
+		sortParameters = fmt.Sprintf("order_by: {%s: desc},",colSort)
+	default:
+		// freebsd, openbsd,
+		// plan9, windows...
+		fmt.Printf("%d.\n", sortIndex)
+	}
+
+
+
+	boilerPlate := fmt.Sprintf("{\"query\":\"query MyQuery {%s(%slimit: %d, offset: %d){\n%s}" + "}\",\"variables\":{}}",tableName,sortParameters,limit,offset,toGet)
 	
 	body2 := makeQuery(boilerPlate)
 	var result2 map[string]interface{}

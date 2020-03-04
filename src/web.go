@@ -20,6 +20,7 @@ func (s *server) routes() {
 	http.HandleFunc("/rec/",s.handlePage())
 	http.HandleFunc("/del/",s.handleDelete())
 	http.HandleFunc("/upload/",s.handleUpload())
+	http.HandleFunc("/sort/",s.handleIndex())
 	http.HandleFunc("/search/",s.handleSearch())
 	http.HandleFunc("/logout/",s.handleLogout())
 
