@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+
+		<title>Database Interface</title>
+		
+		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	    <link rel="stylesheet" href="/css/styles.css">
+
+	</head>
+	<body>
+		<div class="sidenav">
+			<a href="/">Home</a>
+			{{with .TblNames }}
+				{{ range . }}
+						<button class="dropdown-btn">{{.DBName}}
+							<i class="fa fa-caret-down"></i>
+						</button>
+						<div class="dropdown-container">
+							{{ with .TblNames }}
+								{{with .Column }}
+									{{ range . }}
+										<a href="/table/{{.Cat}}/{{ .BackName }}">{{ .Content }}</a>
+									{{ end }}
+								{{ end }}
+							{{ end }}
+						</div>
+				{{ end }}
+			{{ end }}
+					
+		</div>
+		<div class="main">
+			<div class="tables">
+				<div class="metadata">
+					{{with .Metadata }}
+						{{ range . }}
+							{{with .Name }}
+							<h1>{{ .Content }} 
+							{{ end }}
+							{{ with .Cont}}
+								: {{ .Content }}</h1>
+							{{ end }}
+						{{ end }}
+					{{ end }}
+	
+				</div>				
+				<div class="singles">
+					{{with .SingleRel }}
+						{{ range . }}
+							<h1>
+
+								{{with .Name }}	
+									{{$name := .Content }}
+									{{ $name }}
+								{{ end }}
+								:
+								{{ with .Cont}}
+									<a href="/{{ .Table }}/rec/{{ .Name }}/{{.ID}}">{{ .Content }}</a>
+								{{ end }}
+							</h1>
+						{{ end }}
+					{{ end }}
+					
+				</div>
+				<div class="doubles">
+					{{with .DoubleRel }}
+						{{ range . }}
+							<h1>
+
+								{{with .Name }}	
+									{{$name := .Content }}
+									{{ $name }}
+								{{ end }}
+								: <br>
+								{{ with .Cont}}
+									{{ range . }}
+										<a href="/{{ .Table }}/rec/{{ .Name }}/{{ .ID }}">{{ .Content }}</a>
+										<br>
+									{{ end }}
+								{{end}}
+							</h1>
+						{{ end }}
+					{{ end }}
+					
+				</div>
+				<form action="/del/{{.Type}}/{{.ID}}" method="post" id="deletionSelection">
+					<input type="submit" value="Delete">
+				</form>
+			</div>
+		</div>
+		<script>
+			/* Loop through all dropdown buttons to toggle between hiding and showing its dropdown content - This allows the user to have multiple dropdowns without any conflict */
+			var dropdown = document.getElementsByClassName("dropdown-btn");
+			var i;
+			
+			for (i = 0; i < dropdown.length; i++) {
+			  dropdown[i].addEventListener("click", function() {
+			  this.classList.toggle("active");
+			  var dropdownContent = this.nextElementSibling;
+			  if (dropdownContent.style.display === "block") {
+			  dropdownContent.style.display = "none";
+			  } else {
+			  dropdownContent.style.display = "block";
+			  }
+			  });
+			}
+		</script>
+
+	</body>
+</html>
