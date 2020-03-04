@@ -27,7 +27,7 @@ func (s *server) handleIndex() http.HandlerFunc {
 			HttpOnly: true,
 		}
 
-		//fmt.Println(session.Values["loggedIn"].(bool))
+		fmt.Println(session.Values["loggedIn"].(bool))
 		if _, ok := session.Values["loggedIn"]; ok {
 			if r.Method == "GET" && session.Values["loggedIn"].(bool) {
 				//Case for GET request
@@ -61,7 +61,7 @@ func (s *server) handleIndex() http.HandlerFunc {
 							}
 							
 						} else {
-							//logged out
+							http.Redirect(w,r,"/",http.StatusSeeOther)
 						}		
 					}
 				
@@ -97,15 +97,16 @@ func (s *server) handleIndex() http.HandlerFunc {
 }
 func (s *server) handleLogout() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("LOGOUT TRIGGERED")
 		session, _ := store.Get(r, "session-name")
 
-		session.Options = &sessions.Options{
-			Path:     "/",
-			MaxAge:   0,
-			HttpOnly: true,
+		session.Values["loggedIn"] = false
+		err := session.Save(r, w)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
-		session.Values["loggedIn"] = false
 		http.Redirect(w,r,"/",http.StatusSeeOther)
 	}
 }
