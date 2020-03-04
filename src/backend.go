@@ -241,6 +241,97 @@ func getTable(typ string,tableName string,limit int, pageNum int) topLevel {
 	return tlTab
 }
 
+func searchTable(typ string,tableName string,limit int, pageNum int,searchTerm string) topLevel {
+	offset := limit * (pageNum-1)
+	
+
+	var tbl table
+	var tlTab topLevel
+
+	toSend := fmt.Sprintf("{\"query\":\"query MyQuery {\\n  Tables(where: {Name: {_eq: \\\"%s\\\"}}) {\\n    DisplayName\\n    Columns {\\n      Name\\n    }\\n  }\\n}\\n\",\"variables\":{}}",tableName)
+
+	body := makeQuery(toSend)
+	var result map[string]interface{}
+	json.Unmarshal([]byte(body), &result)
+	nameAndColumns := result["data"].(map[string]interface{})["Tables"].([]interface{})
+	
+	displayName := nameAndColumns[0].(map[string]interface{})["DisplayName"].(string)
+	columns := nameAndColumns[0].(map[string]interface{})["Columns"].([]interface{})
+
+	//break this up, we now have the display name "DisplayName" and the lsit of Columns "Columns" and their names "Name"
+
+	var columnList []string
+	for _,ele := range columns {
+		//add the column names to list
+		columnList= append(columnList,ele.(map[string]interface{})["Name"].(string))
+	}
+
+	//iterate through this list, append the values to tbl.Titles
+	for _,ele := range columnList {
+		tbl.Titles = append(tbl.Titles,ent{ele})
+		tbl.ToAdd = append(tbl.ToAdd,ent{ele})
+	}
+	tbl.Name = displayName
+	tbl.BackName = tableName
+	tbl.Page = pageNum + 1
+	tbl.Last = pageNum - 1
+	tbl.Type = typ
+	toGet := ""
+	//write query ti graphql
+	for _,ele := range columnList {
+		toGet += ele +"\n"
+	}
+	toGet += "ID\n"
+	//build search query {Name: {_ilike: "%Aiko%"}}, {Address: {_ilike: "%Sands%"}}
+	searchBoilerplate := "{_ilike: \\\"%" + searchTerm +"%\\\"}"
+	searchCriteria := ""
+	//iterate through all columsn that aren't integer type 
+	for _,ele := range columnList{
+		if(ele != "Attendees") {
+			newCrit := fmt.Sprintf("{%s : %s}",ele,searchBoilerplate)
+			searchCriteria += newCrit + ","
+	
+		}
+	}
+	searchCriteria = searchCriteria[:len(searchCriteria)-1]
+	// fmt.Println(searchCriteria)
+	boilerPlate := fmt.Sprintf("{\"query\":\"query MyQuery {%s(limit: %d, offset: %d,where: {_or: [%s]}){\n%s}" + "}\",\"variables\":{}}",tableName,limit,offset,searchCriteria,toGet)
+
+	body2 := makeQuery(boilerPlate)
+	var result2 map[string]interface{}
+	json.Unmarshal([]byte(body2), &result2)
+	rowData := result2["data"].(map[string]interface{})[tableName].([]interface{})
+	for _,ele := range rowData {
+		var tmp rowEnt
+		for _,col := range columnList {
+
+			x := ele.(map[string]interface{})[col]
+			
+			switch ty := x.(type) {
+			case float64:
+				//x is a float64
+				tmp.Column = append(tmp.Column,ent{fmt.Sprintf("%d",int(ty))})
+				
+			case nil:
+				fmt.Println("NIL")
+			default:
+				//x is a string
+				tmp.Column = append(tmp.Column,ent{x.(string)})
+			} 
+			
+		}
+		tmp.ID = fmt.Sprintf("%d",int(ele.(map[string]interface{})["ID"].(float64)))
+		tmp.Type = tableName
+		tbl.Rows = append(tbl.Rows,tmp)
+		
+	}
+	
+	tlTab = topLevel{Tbls:tbl,TblNames:getTables()}
+	
+
+	return tlTab
+} 
+
 func getTables() []tableNames{
 
 

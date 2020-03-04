@@ -273,6 +273,44 @@ func (s *server) handlePage() http.HandlerFunc {
 	}
 }
 
+func (s *server) handleSearch() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, _ := store.Get(r, "session-name")
+		if _, ok := session.Values["loggedIn"]; ok {
+			if(session.Values["loggedIn"].(bool)) {
+				if(r.Method == "POST") {
+					r.ParseForm()
+					if(len(r.Form) != 0) {
+						// parse for the search term, then pass this to a modified get table function essentially
+						searchTerm := r.Form["searchValue"][0]
+						spl := strings.Split(r.URL.String(),"/")
+						typ := spl[2]
+						tName := spl[3]
+						tbl := searchTable(typ,tName,1000,1,searchTerm)
+
+						tmpl := template.Must(template.ParseFiles("html/table.html"))
+				
+				
+						err := tmpl.Execute(w,tbl)
+						if err != nil {
+							fmt.Println("REEEEE")
+							panic(err)
+						}
+	
+					}
+	
+				}
+			} else {
+				http.Redirect(w, r, "/", http.StatusSeeOther)
+			}
+			
+		} else {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+		}
+		
+	}
+}
+
 func (s *server) handleDelete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "session-name")

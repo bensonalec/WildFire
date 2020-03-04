@@ -38,6 +38,11 @@
 					<h2>
 						{{ .Name }} 
 					</h2>
+					<form action="/search/{{.Type}}/{{ .BackName }}" method="post" id="table-input">
+						<input type="text" name="searchValue" placeholder="Search..">
+						<input type="submit" value="Submit">
+					</form>
+		
 					<table>
 						<tr>
 						{{with .Titles }}
@@ -61,7 +66,11 @@
 				{{ end }}
 				<br>
 				{{with .Tbls }}
-					<button type="button" onclick='window.location.href = "/table/" + {{ .Type }} + "/" + {{ .BackName }} + "/" + parseInt({{ .Last }}) ;'>Previous Page</button>
+					{{if eq .Last 0}}
+						
+					{{else}}
+						<button type="button" onclick='window.location.href = "/table/" + {{ .Type }} + "/" + {{ .BackName }} + "/" + parseInt({{ .Last }}) ;'>Previous Page</button>
+					{{end}}
 					<button type="button" onclick='window.location.href = "/table/" + {{ .Type }} + "/" + {{ .BackName }} + "/" + parseInt({{ .Page }}) ;'>Next Page</button>
 					<button type="button" onclick='window.location.href = "/new/" + {{ .Type }} + "/" + {{ .BackName }} ;'>New Item</button>
 				{{ end }}
