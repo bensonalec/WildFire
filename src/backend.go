@@ -21,6 +21,8 @@ type tableNames struct {
 type table struct {
 	Name string
 	BackName string
+	Page int
+	Last int
 	Type string
 	Titles []ent
 	ToAdd []ent
@@ -159,8 +161,11 @@ func getPage(tableName string, ID string) top{
 	return out
 }
 
-func getTable(typ string,tableName string) topLevel {
+func getTable(typ string,tableName string,limit int, pageNum int) topLevel {
 	//retrieve the column names for that tableName
+	offset := limit * (pageNum-1)
+	
+
 	var tbl table
 	var tlTab topLevel
 
@@ -189,6 +194,8 @@ func getTable(typ string,tableName string) topLevel {
 	}
 	tbl.Name = displayName
 	tbl.BackName = tableName
+	tbl.Page = pageNum + 1
+	tbl.Last = pageNum - 1
 	tbl.Type = typ
 	toGet := ""
 	//write query ti graphql
@@ -197,7 +204,7 @@ func getTable(typ string,tableName string) topLevel {
 	}
 	toGet += "ID\n"
 
-	boilerPlate := "{\"query\":\"query MyQuery {" + tableName + "{\n" + toGet + "}" + "}\",\"variables\":{}}"
+	boilerPlate := fmt.Sprintf("{\"query\":\"query MyQuery {%s(limit: %d, offset: %d){\n%s}" + "}\",\"variables\":{}}",tableName,limit,offset,toGet)
 	
 	body2 := makeQuery(boilerPlate)
 	var result2 map[string]interface{}

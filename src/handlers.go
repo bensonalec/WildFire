@@ -5,11 +5,10 @@ import (
 	"net/http"
 	"html/template"
 	"fmt"
-	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
 	"strings"
 	"github.com/gorilla/sessions"
 	"reflect"
+	"strconv"
 	// "github.com/go-ldap/ldap"
 )
 
@@ -20,26 +19,25 @@ var loggedIn = false
 func (s *server) handleIndex() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "session-name")
-
+		
 		session.Options = &sessions.Options{
 			Path:     "/",
 			MaxAge:   0,
 			HttpOnly: true,
 		}
+		session.Values["loadSize"] = 100
+		err := session.Save(r, w)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-		fmt.Println(session.Values["loggedIn"].(bool))
+
 		if _, ok := session.Values["loggedIn"]; ok {
 			if r.Method == "GET" && session.Values["loggedIn"].(bool) {
 				//Case for GET request
-				db, err := sql.Open("mysql","alec:gregor@tcp(localhost:3306)/SCHOOLDB")
-				if err != nil {
-					fmt.Println("Opening DB failed")
-					log.Fatal(err)
-					
-				}
-				defer db.Close()		
 		
-				 lists := getTables()
+				lists := getTables()
 	
 				t := template.Must(template.ParseFiles("html/loggedInIndex.html"))
 				if err := t.Execute(w, lists); err != nil {
@@ -120,11 +118,14 @@ func (s *server) handleTableLoad() http.HandlerFunc {
 				spl := strings.Split(r.URL.String(),"/")
 				typ := spl[2]
 				tName := spl[3]
+				pagNum,err := strconv.Atoi(spl[4])
 				//based on these, build the table from this info
 				tmpl := template.Must(template.ParseFiles("html/table.html"))
-				tbl := getTable(typ,tName)
+				limit := session.Values["loadSize"].(int)
+
+				tbl := getTable(typ,tName,limit,pagNum)
 				
-				err := tmpl.Execute(w,tbl)
+				err = tmpl.Execute(w,tbl)
 				if err != nil {
 					fmt.Println("REEEEE")
 					panic(err)
@@ -150,18 +151,23 @@ func (s *server) handleNew() http.HandlerFunc {
 		if _, ok := session.Values["loggedIn"]; ok {
 			if(session.Values["loggedIn"].(bool)) {
 				spl := strings.Split(r.URL.String(),"/")
+				if(spl[1] != "new") {
 
-				typ := spl[2]
-				tName := spl[3]
-				tmpl := template.Must(template.ParseFiles("html/newentry.html"))
+				} else {
+					typ := spl[2]
+					tName := spl[3]
+					tmpl := template.Must(template.ParseFiles("html/newentry.html"))
+					limit := session.Values["loadSize"].(int)
 
-				tbl := getTable(typ,tName)
+					tbl := getTable(typ,tName,limit,1)
+					
 				
-			
-				err := tmpl.Execute(w,tbl)
-				if err != nil {
-					fmt.Println("REEEEE")
-					panic(err)
+					err := tmpl.Execute(w,tbl)
+					if err != nil {
+						fmt.Println("REEEEE")
+						panic(err)
+					}
+	
 				}
 
 			} else {

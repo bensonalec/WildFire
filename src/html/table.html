@@ -22,7 +22,7 @@
 							{{ with .TblNames }}
 								{{with .Column }}
 									{{ range . }}
-										<a href="/table/{{.Cat}}/{{ .BackName }}">{{ .Content }}</a>
+										<a href="/table/{{.Cat}}/{{ .BackName }}/1">{{ .Content }}</a>
 									{{ end }}
 								{{ end }}
 							{{ end }}
@@ -61,9 +61,10 @@
 				{{ end }}
 				<br>
 				{{with .Tbls }}
+					<button type="button" onclick='window.location.href = "/table/" + {{ .Type }} + "/" + {{ .BackName }} + "/" + parseInt({{ .Last }}) ;'>Previous Page</button>
+					<button type="button" onclick='window.location.href = "/table/" + {{ .Type }} + "/" + {{ .BackName }} + "/" + parseInt({{ .Page }}) ;'>Next Page</button>
 					<button type="button" onclick='window.location.href = "/new/" + {{ .Type }} + "/" + {{ .BackName }} ;'>New Item</button>
 				{{ end }}
-				
 
 			</div>
 		</div>

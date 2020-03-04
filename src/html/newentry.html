@@ -22,7 +22,7 @@
 							{{ with .TblNames }}
 								{{with .Column }}
 									{{ range . }}
-										<a href="/table/{{.Cat}}/{{ .BackName }}">{{ .Content }}</a>
+										<a href="/table/{{.Cat}}/{{ .BackName }}/1">{{ .Content }}</a>
 									{{ end }}
 								{{ end }}
 							{{ end }}
@@ -85,7 +85,9 @@
 						</table>
 						<br>
 						<input type="submit" value="Submit">
-					</form>
+						</form>
+						<button type="button" onclick='window.location.href = "/new/" + {{ .Type }} + "/" + {{ .BackName }} ;'>New Item</button>
+
 				{{ end }}
 				<br>
 			</div>
