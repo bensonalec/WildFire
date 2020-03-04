@@ -97,8 +97,6 @@ type top struct {
 
 
 func getPage(tableName string, ID string) top{
-	fmt.Println(tableName)
-	fmt.Println(ID)
 	//get columns for this table
 	toSend := fmt.Sprintf("{\"query\":\"query MyQuery {\\n  Tables(where: {Name: {_eq: \\\"%s\\\"}}) {\\n    DisplayName\\n    Columns {\\n      Name\\n    }\\n  }\\n}\\n\",\"variables\":{}}",tableName)
 
@@ -242,7 +240,6 @@ func getTable(typ string,tableName string,limit int, pageNum int) topLevel {
 }
 
 func searchTable(typ string,tableName string,limit int, pageNum int,searchTerm string) topLevel {
-	offset := limit * (pageNum-1)
 	
 
 	var tbl table
@@ -295,7 +292,7 @@ func searchTable(typ string,tableName string,limit int, pageNum int,searchTerm s
 	}
 	searchCriteria = searchCriteria[:len(searchCriteria)-1]
 	// fmt.Println(searchCriteria)
-	boilerPlate := fmt.Sprintf("{\"query\":\"query MyQuery {%s(limit: %d, offset: %d,where: {_or: [%s]}){\n%s}" + "}\",\"variables\":{}}",tableName,limit,offset,searchCriteria,toGet)
+	boilerPlate := fmt.Sprintf("{\"query\":\"query MyQuery {%s(where: {_or: [%s]}){\n%s}" + "}\",\"variables\":{}}",tableName,searchCriteria,toGet)
 
 	body2 := makeQuery(boilerPlate)
 	var result2 map[string]interface{}
@@ -381,11 +378,8 @@ func setRow(typ string, tName string, keys []string, values []string) {
 	}
 
 	toAdd = toAdd[:len(toAdd)-1]
-	fmt.Println(toAdd)
 	boilerPlate := fmt.Sprintf("{\"query\":\"mutation MyMutation {  insert_%s(objects: {%s}) {    affected_rows  }}\",\"variables\":{}}",tName,toAdd)
-	fmt.Println(boilerPlate)
-	execute := makeQuery(boilerPlate)
-	fmt.Println(execute)
+	makeQuery(boilerPlate)
 
 
 }
