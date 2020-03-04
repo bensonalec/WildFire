@@ -311,6 +311,20 @@ func (s *server) handleSearch() http.HandlerFunc {
 	}
 }
 
+func (s *server) handleUpload() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, _ := store.Get(r, "session-name")
+
+		if _, ok := session.Values["loggedIn"]; ok {
+			if(session.Values["loggedIn"].(bool)) {
+				//here, parse a file that has been uploaded
+			}
+		}
+	}
+}
+
+
+
 func (s *server) handleDelete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "session-name")
