@@ -12,6 +12,7 @@ Todo:
 * Edit tables
 * Documentation
 * Install scripts
+* Make everything automated, from building db, pointing hasura at it, then launching the server itself
 * Fix dropdown boxes in add menu
 * Add foreign key table
 * Populate foreign key table
