@@ -25,7 +25,7 @@ type table struct {
 	Page int
 	Last int
 	Type string
-	Titles []ent
+	Titles []doubEnt
 	ToAdd []ent
 	Drop []dropEnt
 	Rows []rowEnt
@@ -50,7 +50,11 @@ type rowEnt struct {
 	ID string
 	Type string
 }
-
+type doubEnt struct {
+	Name string
+	Cont string
+	Type string
+}
 type ent struct {
 	Content string
 }
@@ -189,7 +193,7 @@ func getTable(typ string,tableName string,limit int, pageNum int, sortParam stri
 
 	//iterate through this list, append the values to tbl.Titles
 	for _,ele := range columnList {
-		tbl.Titles = append(tbl.Titles,ent{ele})
+		tbl.Titles = append(tbl.Titles,doubEnt{Name:tableName,Cont:ele,Type:typ})
 		tbl.ToAdd = append(tbl.ToAdd,ent{ele})
 	}
 	tbl.Name = displayName
@@ -291,7 +295,7 @@ func searchTable(typ string,tableName string,limit int, pageNum int,searchTerm s
 
 	//iterate through this list, append the values to tbl.Titles
 	for _,ele := range columnList {
-		tbl.Titles = append(tbl.Titles,ent{ele})
+		tbl.Titles = append(tbl.Titles,doubEnt{tableName,ele,typ})
 		tbl.ToAdd = append(tbl.ToAdd,ent{ele})
 	}
 	tbl.Name = displayName

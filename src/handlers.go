@@ -120,12 +120,13 @@ func setSortDefaults(w http.ResponseWriter,r *http.Request) {
 		
 		session.Values["sort"] = sortValues
 
-		err := session.Save(r, w)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 	}
+	err := session.Save(r, w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 }
 
 func (s *server) handleLogout() http.HandlerFunc {
@@ -158,6 +159,7 @@ func (s *server) handleTableLoad() http.HandlerFunc {
 				tName := spl[3]
 				pagNum,err := strconv.Atoi(spl[4])
 				//based on these, build the table from this info
+
 				sortParam := session.Values["sort"].(map[string]string)[tName]
 				tmpl := template.Must(template.ParseFiles("html/table.html"))
 				limit := session.Values["loadSize"].(int)
@@ -182,6 +184,49 @@ func (s *server) handleTableLoad() http.HandlerFunc {
 	}
 }
 
+func (s *server) handleSort() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
+		session, _ := store.Get(r, "session-name")
+
+		if _, ok := session.Values["loggedIn"]; ok {
+			if(session.Values["loggedIn"].(bool)) {
+				spl := strings.Split(r.URL.String(),"/")
+				//get the tablename and the column name
+				tType := spl[2]
+				tName := spl[3]
+				colName := spl[4]
+			
+				//check the table
+				ind := session.Values["sort"].(map[string]string)[tName]
+				indSplit := strings.Split(ind,",")
+				curCol := indSplit[0]
+				curInd := indSplit[1]
+				
+				newEntry := ""
+				if(curCol == colName) {
+					//increment curInd, then mod by 3
+					curIntInd,_ := strconv.Atoi(curInd)
+					curIntInd++
+					curIntInd %= 3
+					newEntry = colName + "," + strconv.Itoa(curIntInd)
+				} else {
+					newEntry = colName +","+"1"
+				}
+				session.Values["sort"].(map[string]string)[tName] = newEntry
+
+				err := session.Save(r, w)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				//need to get the table type, then redirect back to the /table/type/tname/1
+				http.Redirect(w, r, "/table/"+tType+"/"+tName+"/1", http.StatusSeeOther)
+				
+			}
+		}
+	}
+}
 
 func (s *server) handleNew() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

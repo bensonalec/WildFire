@@ -47,7 +47,8 @@
 						<tr>
 						{{with .Titles }}
 							{{ range . }}
-								<th>{{ .Content }}</th>
+								
+								<th onclick='window.location.href = "/sort/"+{{.Type}} +"/"+{{.Name}}+"/"+{{.Cont}} ;'>{{ .Cont }}</th>
 							{{ end }}
 						{{ end }}
 						</tr>
