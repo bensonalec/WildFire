@@ -14,33 +14,48 @@
 <body>
 	<div class="sidenav">
 		<a href="/">Home</a>
-		{{ range . }}
-			<button class="dropdown-btn">{{.DBName}}
-				<i class="fa fa-caret-down"></i>
-			</button>
-			<div class="dropdown-container">
-				{{ with .TblNames }}
-					{{with .Column }}
-						{{ range . }}
-							<a href="/table/{{.Cat}}/{{ .BackName }}/1">{{ .Content }}</a>
+		{{with .TblNames}}
+			{{ range . }}
+				<button class="dropdown-btn">{{.DBName}}
+					<i class="fa fa-caret-down"></i>
+				</button>
+				<div class="dropdown-container">
+					{{ with .TblNames }}
+						{{with .Column }}
+							{{ range . }}
+								<a href="/table/{{.Cat}}/{{ .BackName }}/1">{{ .Content }}</a>
+							{{ end }}
 						{{ end }}
 					{{ end }}
-				{{ end }}
-			
-			</div>
+				
+				</div>
+			{{ end }}
 		{{ end }}
 		<a href="/logout/">Logout</a>
 		<a href="/import/">Import</a>
 		<a href="/bulkadd/">Bulk Add</a>
 
-
 	</div>
 	<div class="main">
+		<h3>
+			To add multiple rows at once, please enter in the following textbox information in the form:
+			<br>
+			<code>table name</code>
+			<br>
+			<code>col one, col two, etc</code>
+			<br>
+			<code>col one, col two, etc</code>
+			<br>
+			Each line (other than the first line) represents an entry that you would like to add to the Database of the name given on line 1
+			<br>
+		</h3>
 		<div class="tables">
-			<form action="/" method="post" id="table-input">
-				Table Name:<br>
-				<input type="text" name="tableName">
-				<input type="submit" value="Submit">
+			{{ .Msg }}
+			<form action="/addbulk/" method="post" id="table-input">
+				<textarea name="inpvalue" rows="10" cols="90"></textarea>
+				
+				<br><br>			  
+				<input type="submit" value="Submit" />
 			</form>
 		</div>
 	</div>

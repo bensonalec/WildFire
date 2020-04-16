@@ -14,33 +14,35 @@
 <body>
 	<div class="sidenav">
 		<a href="/">Home</a>
-		{{ range . }}
-			<button class="dropdown-btn">{{.DBName}}
-				<i class="fa fa-caret-down"></i>
-			</button>
-			<div class="dropdown-container">
-				{{ with .TblNames }}
-					{{with .Column }}
-						{{ range . }}
-							<a href="/table/{{.Cat}}/{{ .BackName }}/1">{{ .Content }}</a>
+		{{with .TblNames}}
+			{{ range . }}
+				<button class="dropdown-btn">{{.DBName}}
+					<i class="fa fa-caret-down"></i>
+				</button>
+				<div class="dropdown-container">
+					{{ with .TblNames }}
+						{{with .Column }}
+							{{ range . }}
+								<a href="/table/{{.Cat}}/{{ .BackName }}/1">{{ .Content }}</a>
+							{{ end }}
 						{{ end }}
 					{{ end }}
-				{{ end }}
-			
-			</div>
+				
+				</div>
+			{{ end }}
 		{{ end }}
 		<a href="/logout/">Logout</a>
 		<a href="/import/">Import</a>
 		<a href="/bulkadd/">Bulk Add</a>
 
-
 	</div>
 	<div class="main">
 		<div class="tables">
-			<form action="/" method="post" id="table-input">
-				Table Name:<br>
-				<input type="text" name="tableName">
-				<input type="submit" value="Submit">
+			{{ .Msg }}
+			<form enctype="multipart/form-data" action="/upload/" method="post" id="table-input">
+				<input type="file" name="uploadfile" />
+				<input type="hidden" name="token" value="{{.}}"/>
+				<input type="submit" value="upload" />			
 			</form>
 		</div>
 	</div>

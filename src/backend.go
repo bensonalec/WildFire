@@ -14,6 +14,11 @@ type topLevel struct {
 	TblNames []tableNames
 }
 
+type topUpload struct {
+	TblNames []tableNames
+	Msg string
+}
+
 type tableNames struct {
 	DBName string
 	TblNames tblRow
@@ -412,6 +417,104 @@ func setRow(typ string, tName string, keys []string, values []string) {
 	makeQuery(boilerPlate)
 
 
+}
+
+func ImportFromCSV(lines string) string{
+	//It does, so csv should be in form:
+	/*
+	tableName
+	info,info,info,info,info
+	info,info,info,info,info
+	*/
+	//based on the tableName, retreive the expected columns, then read in this input
+	//1: Retrieve the expected columns and types
+	//2: Check that all lines in the input are of the right length and types
+	//3: If all are valid, then make a new entry for each row
+	//3: If any are invalid, notify the user the input in invalid, and on what line
+	allLines := strings.Split(lines,"\n")
+	if(len(allLines) < 2) {
+		return "invalid input"
+	} else {
+		tableTitle := allLines[0]
+		//based on table Title, make a request to get columns and types expected
+		//columns have types and names
+		payload := fmt.Sprintf("{\"query\":\"query MyQuery {\\n  Tables(where: {Name: {_eq: \\\"%s\\\"}}) {\\n    Columns {\\n      Name\\n      Type\\n    }\\n  }\\n}\\n\",\"variables\":{}}",tableTitle)
+		results := makeQuery(payload)
+		//now parse through results to get all the column entries
+		var result map[string]interface{}
+		json.Unmarshal([]byte(results), &result)
+		columns := result["data"].(map[string]interface{})["Tables"].([]interface{})[0].(map[string]interface{})["Columns"].([]interface{})
+		
+		//get lenght of columns
+		expectedLength := len(columns)
+		var expectedTypes []string
+		var keys []string
+		for _,ele := range columns {
+			obj := ele.(map[string]interface{})
+			
+			expectedTypes = append(expectedTypes,obj["Type"].(string))
+			keys = append(keys,obj["Name"].(string))
+		}
+		//now, we know the expectedLength and the expectedTypes
+		for lineNum,line := range allLines[1:] {
+			//split the line by comma
+			if(line != "") {
+				lineSpl := strings.Split(line,",")
+			
+				//check that the line is the appropriate length
+				if(len(lineSpl) != expectedLength) {
+					return "invalid input on line " + strconv.Itoa(lineNum+2) + ", expecting " + strconv.Itoa(expectedLength) + " columns"
+				} 
+				//check that the all input is of the appropriate type
+				for ind,ele := range lineSpl {
+					//check that ele is of the type expected by expectedTypes[ind]
+					if(expectedTypes[ind] == "string") {
+						//good to go
+					}else if(expectedTypes[ind] == "int") {
+						//try to convert ele to int, if it fails then return invalid input on line lineNum, column ind
+						if _, err := strconv.Atoi(ele); err != nil {
+							return "invalid input on line " + strconv.Itoa(lineNum+2) + ", column " + strconv.Itoa(ind+1) +", expected an integer and did not receive one"
+						}
+					}
+				}
+	
+			}
+		}
+		//here, if it hasn't returned all input is valid
+		//so, we want to now make entries for these lines
+		
+		for _, line := range allLines[1:] {
+			if(line != "") {
+				lineSpl := strings.Split(line,",")
+				var toAdd string
+				for _,ele := range columns {
+					colName := ele.(map[string]interface{})["Name"]
+					colType := ele.(map[string]interface{})["Type"]
+					//find index of colname in keys
+					for ind,key := range keys {
+						if key == colName {
+							// fmt.Println(keys[ind],colName,values[ind],colType)
+							if(colType == "string") {
+								toAdd += colName.(string) + ":" + "\\\"" + lineSpl[ind] + "\\\","
+							} else if(colType == "int") {
+								toAdd += colName.(string) + ":" + lineSpl[ind] + ","
+							}
+							break
+						}
+					}
+				}
+				toAdd = toAdd[:len(toAdd)-1]
+				boilerPlate := fmt.Sprintf("{\"query\":\"mutation MyMutation {  insert_%s(objects: {%s}) {    affected_rows  }}\",\"variables\":{}}",tableTitle,toAdd)
+				
+				makeQuery(boilerPlate)
+			}
+		}
+
+	
+	
+		//second, need to iterate through all lines once again
+	}
+	return "Succesfully Added Rows"
 }
 
 func deleteRow(table string, id string) {

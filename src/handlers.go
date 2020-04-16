@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/sessions"
 	"reflect"
 	"strconv"
+	"bufio"
 	// "github.com/go-ldap/ldap"
 )
 
@@ -399,6 +400,37 @@ func (s *server) handleSearch() http.HandlerFunc {
 	}
 }
 
+func (s *server) handleImport(errorMsg string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
+		session, _ := store.Get(r, "session-name")
+
+		if _, ok := session.Values["loggedIn"]; ok {
+			
+			if(session.Values["loggedIn"].(bool)) {
+				//load file upload page
+				lists := getTables()
+				
+				var toPassIn topUpload
+				msg := ""
+				if _, ok := session.Values["uploadRes"]; ok {
+					fmt.Println(session.Values["uploadRes"])
+					msg = session.Values["uploadRes"].(string)
+				}
+				toPassIn.TblNames = lists
+				toPassIn.Msg = msg
+				
+				t := template.Must(template.ParseFiles("html/importFile.html"))
+				if err := t.Execute(w, toPassIn); err != nil {
+					 log.Fatalln(err)
+				}
+
+			}
+		}
+	}
+}
+
+
 func (s *server) handleUpload() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		setSortDefaults(w,r)
@@ -407,11 +439,96 @@ func (s *server) handleUpload() http.HandlerFunc {
 		if _, ok := session.Values["loggedIn"]; ok {
 			if(session.Values["loggedIn"].(bool)) {
 				//here, parse a file that has been uploaded
+				r.ParseMultipartForm(32 << 20)
+
+				file, _, err := r.FormFile("uploadfile")
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				defer file.Close()
+				var lines string
+				scanner := bufio.NewScanner(file)
+				for scanner.Scan() {
+					
+					lines = lines + scanner.Text() + "\n"
+				}
+				
+				result := ImportFromCSV(lines)
+				session.Values["uploadRes"] = result
+				
+				err = session.Save(r, w)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+		
+				http.Redirect(w, r, "/import/", http.StatusSeeOther)
+				
 			}
 		}
 	}
 }
 
+func (s *server) handleBulk() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
+		session, _ := store.Get(r, "session-name")
+
+		if _, ok := session.Values["loggedIn"]; ok {
+			
+			if(session.Values["loggedIn"].(bool)) {
+				lists := getTables()
+				
+				var toPassIn topUpload
+				toPassIn.TblNames = lists
+				if _, ok := session.Values["bulkMsg"]; ok {
+					
+					toPassIn.Msg = session.Values["bulkMsg"].(string)
+				}
+
+				t := template.Must(template.ParseFiles("html/handleBulk.html"))
+				if err := t.Execute(w,toPassIn); err != nil {
+					 log.Fatalln(err)
+				}
+
+			}
+		}
+	}
+}
+
+func (s *server) handleAddBulk() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
+		session, _ := store.Get(r, "session-name")
+
+		if _, ok := session.Values["loggedIn"]; ok {
+			
+			if(session.Values["loggedIn"].(bool)) {
+
+				//here, retrieve the form data 
+				if(r.Method == "POST") {
+					fmt.Println("parsing")
+					r.ParseForm()
+					if(len(r.Form) != 0) {
+						// parse for the search term, then pass this to a modified get table function essentially
+						input := r.Form["inpvalue"][0]
+						msg := ImportFromCSV(input)
+						session.Values["bulkMsg"] = msg
+						err := session.Save(r, w)
+						if err != nil {
+							http.Error(w, err.Error(), http.StatusInternalServerError)
+							return
+						}
+				
+						http.Redirect(w, r, "/bulkadd/", http.StatusSeeOther)
+		
+					}
+				}
+			}
+		}
+	}
+}
 
 
 func (s *server) handleDelete() http.HandlerFunc {
