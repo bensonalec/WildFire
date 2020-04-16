@@ -8,9 +8,7 @@ Built using Postrgre, Hasura, GraphQL, and Go
 As I move towards being production ready, I will update usage and build instructions. 
 
 Todo:
-* Multiple Additions At Once
-* Sorting
-* Import and export CSV
+* Export CSV
 * Edit tables
 * Documentation
 * Install scripts
