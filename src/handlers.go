@@ -11,6 +11,8 @@ import (
 	"reflect"
 	"strconv"
 	"bufio"
+	"io"
+	"os"
 	// "github.com/go-ldap/ldap"
 )
 
@@ -548,6 +550,113 @@ func (s *server) handleExport() http.HandlerFunc {
 		}
 	}
 }
+
+func (s *server) handleExportDL() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
+		session, _ := store.Get(r, "session-name")
+
+		if _, ok := session.Values["loggedIn"]; ok {
+			
+			if(session.Values["loggedIn"].(bool)) {
+
+				if(r.Method == "POST") {
+					r.ParseForm()
+					if(len(r.Form) != 0) {
+						// parse for the search term, then pass this to a modified get table function essentially
+						searchterm := r.Form["searchterm"][0]
+
+						tablename := r.Form["tablename"][0]
+						
+						csvString := ToCSV(tablename, searchterm)
+
+						//Filename should be a hashed version of the tablename and the searchterm, that way it is already stored
+						Filename:="./exports/" + tablename+searchterm + ".csv"
+						//Check if the file exists and if the content is equal to csvString
+						//If it does not exist, or the content is different, then rewrite the file
+						f, err := os.Create(Filename)
+						if err != nil {
+							fmt.Println("Issue")
+						}
+						f.Write([]byte(csvString))
+						f.Close()
+						
+						//Check if file exists and open
+						Openfile, _ := os.Open(Filename)
+						defer Openfile.Close() //Close after function return
+
+						FileHeader := make([]byte, 512)
+						//Copy the headers into the FileHeader buffer
+						Openfile.Read(FileHeader)
+						//Get content type of file
+						FileContentType := http.DetectContentType(FileHeader)
+					
+						//Get the file size
+						FileStat, _ := Openfile.Stat()                     //Get info from file
+						FileSize := strconv.FormatInt(FileStat.Size(), 10) //Get file size as a string
+					
+						//Send the headers
+						w.Header().Set("Content-Disposition", "attachment; filename="+Filename)
+						w.Header().Set("Content-Type", FileContentType)
+						w.Header().Set("Content-Length", FileSize)
+					
+						//Send the file
+						//We read 512 bytes from the file already, so we reset the offset back to 0
+						Openfile.Seek(0, 0)
+						io.Copy(w, Openfile) //'Copy' the file to the client
+					
+					}
+				}
+			}
+		}
+	}
+}
+
+func HandleClient(writer http.ResponseWriter, request *http.Request) {
+	//First of check if Get is set in the URL
+	Filename := request.URL.Query().Get("file")
+	if Filename == "" {
+		//Get not set, send a 400 bad request
+		http.Error(writer, "Get 'file' not specified in url.", 400)
+		return
+	}
+	fmt.Println("Client requests: " + Filename)
+	
+	//Check if file exists and open
+	Openfile, err := os.Open(Filename)
+	defer Openfile.Close() //Close after function return
+	if err != nil {
+		//File not found, send 404
+		http.Error(writer, "File not found.", 404)
+		return
+	}
+
+	//File is found, create and send the correct headers
+
+	//Get the Content-Type of the file
+	//Create a buffer to store the header of the file in
+	FileHeader := make([]byte, 512)
+	//Copy the headers into the FileHeader buffer
+	Openfile.Read(FileHeader)
+	//Get content type of file
+	FileContentType := http.DetectContentType(FileHeader)
+
+	//Get the file size
+	FileStat, _ := Openfile.Stat()                     //Get info from file
+	FileSize := strconv.FormatInt(FileStat.Size(), 10) //Get file size as a string
+
+	//Send the headers
+	writer.Header().Set("Content-Disposition", "attachment; filename="+Filename)
+	writer.Header().Set("Content-Type", FileContentType)
+	writer.Header().Set("Content-Length", FileSize)
+
+	//Send the file
+	//We read 512 bytes from the file already, so we reset the offset back to 0
+	Openfile.Seek(0, 0)
+	io.Copy(writer, Openfile) //'Copy' the file to the client
+	return
+}
+
 
 
 func (s *server) handleDelete() http.HandlerFunc {

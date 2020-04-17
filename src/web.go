@@ -30,6 +30,7 @@ func (s *server) routes() {
 	http.HandleFunc("/bulkadd/",s.handleBulk())
 	http.HandleFunc("/addbulk/",s.handleAddBulk())
 	http.HandleFunc("/export/",s.handleExport())
+	http.HandleFunc("/download/",s.handleExportDL())
 
 	http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir("html"))))
 	fs := http.FileServer(http.Dir("css"))

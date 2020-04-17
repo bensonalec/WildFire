@@ -38,13 +38,13 @@
 	<div class="main">
 
 		<div class="tables">
-			<form action="/idkyet/" method="post" id="table-input">
-				<select name="Table Name">
+			<form action="/download/" method="post" id="table-input">
+				<select name="tablename">
 						{{ range . }}
 							{{ with .TblNames }}
 								{{with .Column }}
 									{{ range . }}
-											<option value="{{ .Cat }}/{{ .BackName }}">{{ .Content}} ({{ .Cat }})</option>
+											<option value="{{ .BackName }}">{{ .Content}} ({{ .Cat }})</option>
 									{{ end }}
 								{{ end }}
 							{{ end }}
