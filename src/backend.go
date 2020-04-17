@@ -419,6 +419,80 @@ func setRow(typ string, tName string, keys []string, values []string) {
 
 }
 
+func ToCSV(tableName string, searchTerm string) string{
+	//basically, given the tableName and a search query, get these rows from the database, and export this data to a csv
+	//so, basic strucutre is:
+	//1: perform search on given table (can reuse logic from search)
+	csvOutput := ""
+	toSend := fmt.Sprintf("{\"query\":\"query MyQuery {\\n  Tables(where: {Name: {_eq: \\\"%s\\\"}}) {\\n    DisplayName\\n    Columns {\\n      Name\\n    }\\n  }\\n}\\n\",\"variables\":{}}",tableName)
+
+	body := makeQuery(toSend)
+	var result map[string]interface{}
+	json.Unmarshal([]byte(body), &result)
+	nameAndColumns := result["data"].(map[string]interface{})["Tables"].([]interface{})
+	columns := nameAndColumns[0].(map[string]interface{})["Columns"].([]interface{})
+
+	//2: get the columns for this
+	var columnList []string
+	for _,ele := range columns {
+		//3: make line 1 of the csv the column names
+		columnList= append(columnList,ele.(map[string]interface{})["Name"].(string))
+		csvOutput += ele.(map[string]interface{})["Name"].(string) + ","
+	}
+	csvOutput = csvOutput[:len(csvOutput)-1]+"\n"
+	toGet := ""
+	//write query ti graphql
+	for _,ele := range columnList {
+		toGet += ele +"\n"
+	}
+	toGet += "ID\n"
+	//build search query {Name: {_ilike: "%Aiko%"}}, {Address: {_ilike: "%Sands%"}}
+	searchBoilerplate := "{_ilike: \\\"%" + searchTerm +"%\\\"}"
+	searchCriteria := ""
+	//iterate through all columsn that aren't integer type 
+	for _,ele := range columnList{
+		if(ele != "Attendees") {
+			newCrit := fmt.Sprintf("{%s : %s}",ele,searchBoilerplate)
+			searchCriteria += newCrit + ","
+	
+		}
+	}
+	searchCriteria = searchCriteria[:len(searchCriteria)-1]
+	boilerPlate := fmt.Sprintf("{\"query\":\"query MyQuery {%s(where: {_or: [%s]}){\n%s}" + "}\",\"variables\":{}}",tableName,searchCriteria,toGet)
+
+	body2 := makeQuery(boilerPlate)
+	var result2 map[string]interface{}
+	json.Unmarshal([]byte(body2), &result2)
+	rowData := result2["data"].(map[string]interface{})[tableName].([]interface{})
+
+	//4: now, get each line from the results
+
+	for _,ele := range rowData {
+		newLine := ""	
+		for _,col := range columnList {
+
+			x := ele.(map[string]interface{})[col]
+			
+			switch ty := x.(type) {
+			case float64:
+				//x is a float64
+				// tmp.Column = append(tmp.Column,ent{fmt.Sprintf("%d",int(ty))})
+				newLine += fmt.Sprintf("%d",int(ty)) + ","
+			case nil:
+				newLine += "nil" + ","
+			default:
+				//x is a string
+				// tmp.Column = append(tmp.Column,ent{x.(string)})
+				newLine += x.(string) + ","
+			} 
+			
+		}
+		csvOutput += newLine + "\n"
+	}	
+	return csvOutput
+
+}
+
 func ImportFromCSV(lines string) string{
 	//It does, so csv should be in form:
 	/*
