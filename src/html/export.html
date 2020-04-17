@@ -14,22 +14,20 @@
 <body>
 	<div class="sidenav">
 		<a href="/">Home</a>
-		{{with .TblNames}}
-			{{ range . }}
-				<button class="dropdown-btn">{{.DBName}}
-					<i class="fa fa-caret-down"></i>
-				</button>
-				<div class="dropdown-container">
-					{{ with .TblNames }}
-						{{with .Column }}
-							{{ range . }}
-								<a href="/table/{{.Cat}}/{{ .BackName }}/1">{{ .Content }}</a>
-							{{ end }}
+		{{ range . }}
+			<button class="dropdown-btn">{{.DBName}}
+				<i class="fa fa-caret-down"></i>
+			</button>
+			<div class="dropdown-container">
+				{{ with .TblNames }}
+					{{with .Column }}
+						{{ range . }}
+							<a href="/table/{{.Cat}}/{{ .BackName }}/1">{{ .Content }}</a>
 						{{ end }}
 					{{ end }}
-				
-				</div>
-			{{ end }}
+				{{ end }}
+			
+			</div>
 		{{ end }}
 		<a href="/logout/">Logout</a>
 		<a href="/import/">Import</a>
@@ -38,12 +36,24 @@
 
 	</div>
 	<div class="main">
+
 		<div class="tables">
-			{{ .Msg }}
-			<form enctype="multipart/form-data" action="/upload/" method="post" id="table-input">
-				<input type="file" name="uploadfile" />
-				<input type="hidden" name="token" value="{{.}}"/>
-				<input type="submit" value="upload" />			
+			<form action="/idkyet/" method="post" id="table-input">
+				<select name="Table Name">
+						{{ range . }}
+							{{ with .TblNames }}
+								{{with .Column }}
+									{{ range . }}
+											<option value="{{ .Cat }}/{{ .BackName }}">{{ .Content}} ({{ .Cat }})</option>
+									{{ end }}
+								{{ end }}
+							{{ end }}
+						{{ end }}
+				</select>
+		
+				<input type="text" value="Enter Search Term (optional)" name="searchterm"/>				
+				<br><br>			  
+				<input type="submit" value="Submit" />
 			</form>
 		</div>
 	</div>

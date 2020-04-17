@@ -29,6 +29,7 @@ func (s *server) routes() {
 	http.HandleFunc("/upload/",s.handleUpload())
 	http.HandleFunc("/bulkadd/",s.handleBulk())
 	http.HandleFunc("/addbulk/",s.handleAddBulk())
+	http.HandleFunc("/export/",s.handleExport())
 
 	http.Handle("/html/", http.StripPrefix("/html/", http.FileServer(http.Dir("html"))))
 	fs := http.FileServer(http.Dir("css"))
@@ -42,5 +43,6 @@ func main() {
 	serv.routes()
 	serv.serve()
 	// fmt.Println(ImportFromCSV("Schools\nhello,hello,hello,hello,hello,hello,7\n"))
+	// ToCSV("Schools","Cleveland")
 }
 

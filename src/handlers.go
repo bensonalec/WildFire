@@ -530,6 +530,25 @@ func (s *server) handleAddBulk() http.HandlerFunc {
 	}
 }
 
+func (s *server) handleExport() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		setSortDefaults(w,r)
+		session, _ := store.Get(r, "session-name")
+
+		if _, ok := session.Values["loggedIn"]; ok {
+			
+			if(session.Values["loggedIn"].(bool)) {
+				lists := getTables()
+				t := template.Must(template.ParseFiles("html/export.html"))
+				if err := t.Execute(w,lists); err != nil {
+					 log.Fatalln(err)
+				}
+
+			}
+		}
+	}
+}
+
 
 func (s *server) handleDelete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
