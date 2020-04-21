@@ -382,8 +382,12 @@ func (s *server) handleSearch() http.HandlerFunc {
 						typ := spl[2]
 						tName := spl[3]
 						tbl := searchTable(typ,tName,1000,1,searchTerm)
-
 						tmpl := template.Must(template.ParseFiles("html/table.html"))
+						if(typ == "Schools") {
+							tmpl = template.Must(template.ParseFiles("html/table.html"))
+						} else {
+							tmpl = template.Must(template.ParseFiles("html/purpletable.html"))
+						}
 				
 				
 						err := tmpl.Execute(w,tbl)
