@@ -162,9 +162,13 @@ func (s *server) handleTableLoad() http.HandlerFunc {
 				tName := spl[3]
 				pagNum,err := strconv.Atoi(spl[4])
 				//based on these, build the table from this info
-
-				sortParam := session.Values["sort"].(map[string]string)[tName]
 				tmpl := template.Must(template.ParseFiles("html/table.html"))
+				if(typ == "Schools") {
+					tmpl = template.Must(template.ParseFiles("html/table.html"))
+				} else {
+					tmpl = template.Must(template.ParseFiles("html/purpletable.html"))
+				}
+				sortParam := session.Values["sort"].(map[string]string)[tName]
 				limit := session.Values["loadSize"].(int)
 
 				tbl := getTable(typ,tName,limit,pagNum,sortParam)
