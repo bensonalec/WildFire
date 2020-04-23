@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"strconv"
+	"gopkg.in/ldap.v2"
+	"log"
 )
 
 type topLevel struct {
@@ -599,7 +601,7 @@ func deleteRow(table string, id string) {
 
 func makeQuery(query string) string{
 
-	url := "http://localhost:8080/v1/graphql"
+	url := "http://192.168.200.19:80/v1/graphql"
 	method := "POST"
   
 	payload := strings.NewReader(query)
@@ -624,68 +626,64 @@ func makeQuery(query string) string{
 }
 
 func login(username string, password string) bool {
+	//bind info
+	bindusername := "CN=DBvis,OU=CC Service Accounts (Current),DC=cc,DC=nmt,DC=edu"
+	bindpassword := "Gb2dpr6Pne9qvX%GYqA48nERqgzAVJ"
+
+	//dial into server over TCP without TLS
+	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", "192.168.200.10", 389))
+	if err != nil {
+	    log.Fatal(err)
+	}
+	defer l.Close()
+
+	// First bind with a read only user
+	err = l.Bind(bindusername, bindpassword)
+	if err != nil {
+		fmt.Println("Can't bind")
+		log.Println(err)
+		return false
+	}
+
+	// Search for the given username
+	searchRequest := ldap.NewSearchRequest(
+	    "dc=cc,dc=nmt,dc=edu",
+	    ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+	    fmt.Sprintf("(&(sAMAccountName=%s))", username),
+	    []string{"dn"},
+	    nil,
+	)
+
+	sr, err := l.Search(searchRequest)
+	if err != nil {
+		fmt.Println("Error in search")
+		log.Println(err)
+		return false
+	}
+	
+	if len(sr.Entries) != 1 {
+		for _,i := range sr.Entries {
+			fmt.Println(i,"||",i.DN)
+		}
+		log.Println("User does not exist or too many entries returned")
+		return false
+	}
+
+	
+	userdn := sr.Entries[0].DN
+
+	// Bind as the user to verify their password
+	err = l.Bind(userdn, password)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+
+	// Rebind as the read only user for any further queries
+	err = l.Bind(bindusername, bindpassword)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
 	return true
 }
-
-// func login(username string, password string) bool {
-// 	//bind info
-// 	bindusername := "CN=DBvis,OU=CC Service Accounts (Current),DC=cc,DC=nmt,DC=edu"
-// 	bindpassword := "Gb2dpr6Pne9qvX%GYqA48nERqgzAVJ"
-
-// 	//dial into server over TCP without TLS
-// 	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", "192.168.200.10", 389))
-// 	if err != nil {
-// 	    log.Fatal(err)
-// 	}
-// 	defer l.Close()
-
-// 	// First bind with a read only user
-// 	err = l.Bind(bindusername, bindpassword)
-// 	if err != nil {
-// 		fmt.Println("Can't bind")
-// 		log.Println(err)
-// 		return false
-// 	}
-
-// 	// Search for the given username
-// 	searchRequest := ldap.NewSearchRequest(
-// 	    "dc=cc,dc=nmt,dc=edu",
-// 	    ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-// 	    fmt.Sprintf("(&(sAMAccountName=%s))", username),
-// 	    []string{"dn"},
-// 	    nil,
-// 	)
-
-// 	sr, err := l.Search(searchRequest)
-// 	if err != nil {
-// 		fmt.Println("Error in search")
-// 		log.Println(err)
-// 		return false
-// 	}
-	
-// 	if len(sr.Entries) != 1 {
-// 		for _,i := range sr.Entries {
-// 			fmt.Println(i,"||",i.DN)
-// 		}
-// 		log.Println("User does not exist or too many entries returned")
-// 		return false
-// 	}
-
-	
-// 	userdn := sr.Entries[0].DN
-
-// 	// Bind as the user to verify their password
-// 	err = l.Bind(userdn, password)
-// 	if err != nil {
-// 		log.Println(err)
-// 		return false
-// 	}
-
-// 	// Rebind as the read only user for any further queries
-// 	err = l.Bind(bindusername, bindpassword)
-// 	if err != nil {
-// 		log.Println(err)
-// 		return false
-// 	}
-// 	return true
-// }
