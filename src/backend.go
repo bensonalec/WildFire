@@ -110,7 +110,7 @@ type top struct {
 
 func getPage(tableName string, ID string) top{
 	//get columns for this table
-	toSend := fmt.Sprintf("{\"query\":\"query MyQuery {\\n  Tables(where: {Name: {_eq: \\\"%s\\\"}}) {\\n    DisplayName\\n    Columns {\\n      Name\\n    }\\n  }\\n}\\n\",\"variables\":{}}",tableName)
+	toSend := fmt.Sprintf("{\"query\":\"query MyQuery {\\n  Tables(where: {Name: {_eq: \\\"%s\\\"}}) {\\n    DisplayName\\n    Columns {\\n      Name\\n    relType\\n	secTable\\n}\\n  }\\n}\\n\",\"variables\":{}}",tableName)
 
 	body := makeQuery(toSend)
 	var result map[string]interface{}
@@ -123,14 +123,24 @@ func getPage(tableName string, ID string) top{
 	//break this up, we now have the display name "DisplayName" and the lsit of Columns "Columns" and their names "Name"
 
 	var columnList []string
+	var colRelList []string
+	var colSecList []string
 	for _,ele := range columns {
 		//add the column names to list
 		columnList= append(columnList,ele.(map[string]interface{})["Name"].(string))
+		colRelList = append(colRelList,ele.(map[string]interface{})["relType"].(string))
+		colSecList = append(colSecList,ele.(map[string]interface{})["secTable"].(string))
 	}
 	toGet := ""
 	//write query ti graphql
-	for _,ele := range columnList {
-		toGet += ele +"\n"
+	for ind,ele := range columnList {
+		if(colRelList[ind] == "single") {
+			toGet += ele +"\n"
+		}else {
+			toGet += ele + "{\\n	ID\\n}"  + "\n"
+		}
+
+
 	}
 	toGet += "ID\n"
 
@@ -141,25 +151,107 @@ func getPage(tableName string, ID string) top{
 	var result2 map[string]interface{}
 	json.Unmarshal([]byte(body2), &result2)
 	elements := result2["data"].(map[string]interface{})[tableName].([]interface{})[0].(map[string]interface{})
-
+	fmt.Println(elements)
 	var out top 
 	out.TblNames = getTables()
 	out.Type = displayName
 	out.ID = ID
 	var tempDoub []doub
 	
-	for _,ele := range columnList {
-		switch ty := elements[ele].(type) {
-		case float64:
-			//x is a float64
-			tempDoub = append(tempDoub,doub{ent{ele},ent{fmt.Sprintf("%d",int(ty))}})
-			
-		case nil:
-			fmt.Println("NIL")
-		default:
-			//x is a string
-			tempDoub = append(tempDoub,doub{ent{ele},ent{ty.(string)}})
-			} 
+	for ind,ele := range columnList {
+		colRel := colRelList[ind]
+		if(colRel == "single") {
+			switch ty := elements[ele].(type) {
+			case float64:
+				//x is a float64
+				tempDoub = append(tempDoub,doub{ent{ele},ent{fmt.Sprintf("%d",int(ty))}})
+				
+			case nil:
+				fmt.Println("NIL")
+			default:
+				//x is a string
+				tempDoub = append(tempDoub,doub{ent{ele},ent{ty.(string)}})
+				} 
+	
+		} else {
+
+			//I've got the column name
+			fmt.Println(ele)
+			//I've got the secondary table
+			secTable := colSecList[ind]
+			//I've got associated IDs
+			fmt.Println(elements[ele])
+
+			//Want to build query given the IDs that will retreive either the name or the first name and last name of the associated stuff
+
+			//first, need to retrieve the columns of table secTable
+			toSend := fmt.Sprintf("{\"query\":\"query MyQuery {\\n  Tables(where: {Name: {_eq: \\\"%s\\\"}}) {\\n    DisplayName\\n    Columns {\\n      Name\\n    relType\\n	secTable\\n}\\n  }\\n}\\n\",\"variables\":{}}",secTable)
+
+			body := makeQuery(toSend)
+			var result map[string]interface{}
+			json.Unmarshal([]byte(body), &result)
+			nameAndColumns := result["data"].(map[string]interface{})["Tables"].([]interface{})			
+			columns := nameAndColumns[0].(map[string]interface{})["Columns"].([]interface{})
+			secToGet := ""
+			var secToGetArr []string
+			for _,ele :=  range columns {
+				colName := ele.(map[string]interface{})["Name"].(string)
+				//wat to check if either name, or first name and last name are present
+				if(colName == "Name") {
+					secToGet += colName + "\n"
+					secToGetArr = append(secToGetArr,colName)
+				} else if (colName == "First") {
+					secToGet += colName + "\n"
+					secToGetArr = append(secToGetArr,colName)
+				} else if (colName == "Last") {
+					secToGet += colName + "\n"
+					secToGetArr = append(secToGetArr,colName)
+				}
+
+			}
+			//now, need to build query for the ids, given the appropriate info needed (secToGet)
+
+			for _,ele := range elements[ele].([]interface{}) {
+				boilerPlate := fmt.Sprintf("{\"query\":\"query MyQuery {%s(where: {ID: {_eq: %f}}){\n%s}" + "}\",\"variables\":{}}",secTable,ele.(map[string]interface{})["ID"].(float64),secToGet)
+				
+				body2 := makeQuery(boilerPlate)
+				
+				var result2 map[string]interface{}
+				json.Unmarshal([]byte(body2), &result2)
+				nameEle := result2["data"].(map[string]interface{})[secTable].([]interface{})[0].(map[string]interface{})
+				var finalName string
+				for _,it := range nameEle {
+					finalName += it.(string) + " "
+				}
+				fmt.Println(finalName)
+				//doub?
+				/*
+				type complexent struct {
+					Content string
+					Name string
+					ID string
+					Table string
+				}
+
+				type multidoub struct {
+					Name ent
+					Cont complexent
+				}
+				*/
+				//need to make complexent from this data
+				var cpx complexent
+				cpx.Content = finalName
+				cpx.Name = secTable
+				cpx.ID = fmt.Sprintf("%d",int(ele.(map[string]interface{})["ID"].(float64)))
+				cpx.Table = secTable
+				var mul multidoub
+				mul.Name = ent{secTable}
+				mul.Cont = cpx
+				out.SingleRel = append(out.SingleRel,mul)
+			}
+		
+		
+		}
 	}
 	out.Metadata = tempDoub
 	//get to the array of fields
@@ -180,7 +272,7 @@ func getTable(typ string,tableName string,limit int, pageNum int, sortParam stri
 	var tbl table
 	var tlTab topLevel
 
-	toSend := fmt.Sprintf("{\"query\":\"query MyQuery {\\n  Tables(where: {Name: {_eq: \\\"%s\\\"}}) {\\n    DisplayName\\n    Columns {\\n      Name\\n    }\\n  }\\n}\\n\",\"variables\":{}}",tableName)
+	toSend := fmt.Sprintf("{\"query\":\"query MyQuery {\\n  Tables(where: {Name: {_eq: \\\"%s\\\"}}) {\\n    DisplayName\\n    Columns {\\n      Name\\n    relType\\n}\\n  }\\n}\\n\",\"variables\":{}}",tableName)
 
 	body := makeQuery(toSend)
 	var result map[string]interface{}
@@ -189,19 +281,22 @@ func getTable(typ string,tableName string,limit int, pageNum int, sortParam stri
 	
 	displayName := nameAndColumns[0].(map[string]interface{})["DisplayName"].(string)
 	columns := nameAndColumns[0].(map[string]interface{})["Columns"].([]interface{})
-
 	//break this up, we now have the display name "DisplayName" and the lsit of Columns "Columns" and their names "Name"
 
 	var columnList []string
+	var colRelList []string
 	for _,ele := range columns {
 		//add the column names to list
 		columnList= append(columnList,ele.(map[string]interface{})["Name"].(string))
+		colRelList= append(colRelList,ele.(map[string]interface{})["relType"].(string))
 	}
 
 	//iterate through this list, append the values to tbl.Titles
-	for _,ele := range columnList {
-		tbl.Titles = append(tbl.Titles,doubEnt{Name:tableName,Cont:ele,Type:typ})
-		tbl.ToAdd = append(tbl.ToAdd,ent{ele})
+	for ind,ele := range columnList {
+		if(colRelList[ind] == "single") {
+			tbl.Titles = append(tbl.Titles,doubEnt{Name:tableName,Cont:ele,Type:typ})
+			tbl.ToAdd = append(tbl.ToAdd,ent{ele})	
+		}
 	}
 	tbl.Name = displayName
 	tbl.BackName = tableName
@@ -210,8 +305,11 @@ func getTable(typ string,tableName string,limit int, pageNum int, sortParam stri
 	tbl.Type = typ
 	toGet := ""
 	//write query ti graphql
-	for _,ele := range columnList {
-		toGet += ele +"\n"
+	for ind,ele := range columnList {
+		if(colRelList[ind] == "single") {
+			toGet += ele +"\n"
+		}
+
 	}
 	toGet += "ID\n"
 
@@ -247,21 +345,23 @@ func getTable(typ string,tableName string,limit int, pageNum int, sortParam stri
 	rowData := result2["data"].(map[string]interface{})[tableName].([]interface{})
 	for _,ele := range rowData {
 		var tmp rowEnt
-		for _,col := range columnList {
-
-			x := ele.(map[string]interface{})[col]
+		for ind,col := range columnList {
+			if(colRelList[ind] == "single") {
+				x := ele.(map[string]interface{})[col]
 			
-			switch ty := x.(type) {
-			case float64:
-				//x is a float64
-				tmp.Column = append(tmp.Column,ent{fmt.Sprintf("%d",int(ty))})
-				
-			case nil:
-				fmt.Println("NIL")
-			default:
-				//x is a string
-				tmp.Column = append(tmp.Column,ent{x.(string)})
-			} 
+				switch ty := x.(type) {
+				case float64:
+					//x is a float64
+					tmp.Column = append(tmp.Column,ent{fmt.Sprintf("%d",int(ty))})
+					
+				case nil:
+					fmt.Println("NIL")
+				default:
+					//x is a string
+					tmp.Column = append(tmp.Column,ent{x.(string)})
+				} 
+	
+			}
 			
 		}
 		tmp.ID = fmt.Sprintf("%d",int(ele.(map[string]interface{})["ID"].(float64)))
