@@ -149,7 +149,7 @@ func getPage(tableName string, ID string) top{
 	var result2 map[string]interface{}
 	json.Unmarshal([]byte(body2), &result2)
 	elements := result2["data"].(map[string]interface{})[tableName].([]interface{})[0].(map[string]interface{})
-	fmt.Println(elements)
+
 	var out top 
 	out.TblNames = getTables()
 	out.Type = displayName
@@ -171,14 +171,14 @@ func getPage(tableName string, ID string) top{
 				tempDoub = append(tempDoub,doub{ent{ele},ent{ty.(string)}})
 				} 
 	
-		} else {
+		} else if(colRel == "double") {
 
 			//I've got the column name
-			fmt.Println(ele)
+			// fmt.Println(ele)
 			//I've got the secondary table
 			secTable := colSecList[ind]
 			//I've got associated IDs
-			fmt.Println(elements[ele])
+			// fmt.Println(elements[ele])
 
 			//Want to build query given the IDs that will retreive either the name or the first name and last name of the associated stuff
 
@@ -221,7 +221,7 @@ func getPage(tableName string, ID string) top{
 				for _,it := range nameEle {
 					finalName += it.(string) + " "
 				}
-				fmt.Println(finalName)
+
 				//doub?
 				/*
 				type complexent struct {
@@ -249,6 +249,113 @@ func getPage(tableName string, ID string) top{
 			}
 		
 		
+		} else if(colRel == "triple") {
+			//I've got the column name
+			fmt.Println(ele)
+			//I've got the secondary table
+			secTable := colSecList[ind]
+			//I've got associated IDs
+			fmt.Println("IDS",elements[ele])
+
+			//now, retrieve the columns in secondary table
+			toSend := fmt.Sprintf("{\"query\":\"query MyQuery {\\n  Tables(where: {Name: {_eq: \\\"%s\\\"}}) {\\n    DisplayName\\n    Columns {\\n      Name\\n    relType\\n	secTable\\n}\\n  }\\n}\\n\",\"variables\":{}}",secTable)
+
+			body := makeQuery(toSend)
+			var result map[string]interface{}
+			json.Unmarshal([]byte(body), &result)
+			nameAndColumns := result["data"].(map[string]interface{})["Tables"].([]interface{})			
+			columns := nameAndColumns[0].(map[string]interface{})["Columns"].([]interface{})
+			secToGet := ""
+
+			//first, go through and determine what table is not the one we came from
+			//since we know where we've come from (what table), we can determine where we want to go to
+			var imName string
+			for _,ele := range columns {
+				if(ele.(map[string]interface{})["Name"].(string) != tableName) {
+					imName = ele.(map[string]interface{})["Name"].(string)
+				}
+			}
+			fmt.Println(imName)
+			secToGet += imName
+
+			// secInnards := secToGet + "{\\n	Name\\n}"
+			
+			//now, retrieve the columns in secondary table
+			toSend2 := fmt.Sprintf("{\"query\":\"query MyQuery {\\n  Tables(where: {Name: {_eq: \\\"%s\\\"}}) {\\n    DisplayName\\n    Columns {\\n      Name\\n    relType\\n	secTable\\n}\\n  }\\n}\\n\",\"variables\":{}}",secToGet)
+
+			body3 := makeQuery(toSend2)
+			secInnards := secToGet + "{\\n"
+			var result3 map[string]interface{}
+			json.Unmarshal([]byte(body3), &result3)
+			nameAndColumns3 := result3["data"].(map[string]interface{})["Tables"].([]interface{})			
+			columns2 := nameAndColumns3[0].(map[string]interface{})["Columns"].([]interface{})
+			for _,ele :=  range columns2 {
+				colName := ele.(map[string]interface{})["Name"].(string)
+				//wat to check if either name, or first name and last name are present
+				if(colName == "Name") {
+					secInnards += colName + "\n"
+					
+				} else if (colName == "First") {
+					secInnards += colName + "\n"
+					
+				} else if (colName == "Last") {
+					secInnards += colName + "\n"
+					
+				}
+
+			}
+			secInnards += "}"
+
+			//now, since I know the id that I'm at, I can retrieve this entry
+			for _,ele := range elements[ele].([]interface{}) {
+				boilerPlate := fmt.Sprintf("{\"query\":\"query MyQuery {%s(where: {%s: {_eq: %d}}){\n%s}" + "}\",\"variables\":{}}",secTable,strings.ToLower(secToGet) + "ID",int(ele.(map[string]interface{})["ID"].(float64)),secInnards)
+				body2 := makeQuery(boilerPlate)
+				fmt.Println(body2)
+				var result2 map[string]interface{}
+				json.Unmarshal([]byte(body2), &result2)
+
+				nameEle := result2["data"].(map[string]interface{})[secTable].([]interface{})[0].(map[string]interface{})[secToGet].(map[string]interface{})
+				
+				var finalName string
+				for _,it := range nameEle {
+					fmt.Println(it)
+					finalName += it.(string) + " "
+				}
+
+				/*
+				type complexent struct {
+					Content string
+					Name string
+					ID string
+					Table string
+				}
+
+				type multidoub struct {
+					Name ent
+					Cont complexent
+				}
+				*/
+
+				/*
+				type trip struct {
+					Name ent
+					Cont []complexent
+				}
+				*/
+				var cpx complexent
+				cpx.Content = finalName
+				cpx.Name = secToGet
+				cpx.ID = fmt.Sprintf("%d",int(ele.(map[string]interface{})["ID"].(float64)))
+				cpx.Table = secToGet
+				var mul multidoub
+				mul.Name = ent{secToGet}
+				mul.Cont = cpx
+				out.SingleRel = append(out.SingleRel,mul)
+
+			}
+
+			//so, with column 1 and column 2 gotten in the table secTable, and we came from table called column 1, we know we ant to go to table called column 2
+			//then we know the id 
 		}
 	}
 	out.Metadata = tempDoub
