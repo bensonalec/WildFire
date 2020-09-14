@@ -1,16 +1,8 @@
-Students,5,Students
-First,Last,Email
-Schools,9,Schools
-Name,Address,City,URL,Email,Phone,Attendees
-School_POC,6,Points of Contact
-First,Last,Email,Phone
-School_Event,6,Events
-Name,Date,Trainer
-Business,9,Businesses
+Business,10,Businesses
 Name,URL,Email,City,Zip,Address,Phone
-Bus_POC,6,Points of Contact
+Bus_POC,7,Points of Contact
 First,Last,Email,Phone
-Sector,2,Sectors
+Sector,3,Sectors
 Name
-Bus_Event,6,Events
+Bus_Event,7,Events
 Name,Date,Trainer

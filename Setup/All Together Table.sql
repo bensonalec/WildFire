@@ -1,14 +1,25 @@
+CREATE TABLE "Types" (
+  "ID" SERIAL PRIMARY KEY,
+  "Name" varchar
+);
+
 CREATE TABLE "Tables" (
   "ID" SERIAL PRIMARY KEY,
   "Name" varchar,
-  "NumberOfColumns" int
+  "NumberOfColumns" int,
+  "Hidden" boolean,
+  "DisplayName" varchar,
+  "Type" varchar
 );
 
 CREATE TABLE "Columns" (
   "ID" SERIAL PRIMARY KEY,
   "Name" varchar,
+  "DisplayName" varchar,
   "Hidden" boolean,
-  "tableID" int
+  "tableID" int,
+  "Type" varchar,
+  "relType" varchar
 );
 
 CREATE TABLE "Business" (
@@ -20,7 +31,8 @@ CREATE TABLE "Business" (
   "Zip" varchar,
   "Address" varchar,
   "Phone" varchar,
-  "PointofContactID" int
+  "PointofContactID" int,
+  "Access" varchar
 );
 
 CREATE TABLE "Bus_POC" (
@@ -29,7 +41,8 @@ CREATE TABLE "Bus_POC" (
   "Last" varchar,
   "Email" varchar,
   "Phone" varchar,
-  "businessID" int
+  "businessID" int,
+  "Access" varchar
 );
 
 CREATE TABLE "Bus_Event" (
@@ -38,12 +51,14 @@ CREATE TABLE "Bus_Event" (
   "Date" varchar,
   "Trainer" varchar,
   "PointofContactID" int,
-  "businessID" int
+  "businessID" int,
+  "Access" varchar
 );
 
 CREATE TABLE "Sector" (
   "ID" SERIAL PRIMARY KEY,
-  "Name" varchar
+  "Name" varchar,
+  "Access" varchar
 );
 
 CREATE TABLE "busToSec" (
@@ -52,49 +67,7 @@ CREATE TABLE "busToSec" (
   "sectorID" int
 );
 
-CREATE TABLE "Schools" (
-  "ID" SERIAL PRIMARY KEY,
-  "Name" varchar,
-  "Address" varchar,
-  "City" varchar,
-  "URL" varchar,
-  "Email" varchar,
-  "Phone" varchar,
-  "Attendees" int,
-  "pointofContact_id" int
-);
-
-CREATE TABLE "School_POC" (
-  "ID" SERIAL PRIMARY KEY,
-  "First" varchar,
-  "Last" varchar,
-  "Email" varchar,
-  "Phone" varchar,
-  "schoolID" int
-);
-
-CREATE TABLE "School_Event" (
-  "ID" SERIAL PRIMARY KEY,
-  "Name" varchar,
-  "Date" varchar,
-  "Trainer" varchar,
-  "PointofContactID" int,
-  "schoolID" int
-);
-
-CREATE TABLE "Students" (
-  "ID" SERIAL PRIMARY KEY,
-  "First" varchar,
-  "Last" varchar,
-  "Email" varchar,
-  "schoolID" int
-);
-
-CREATE TABLE "stuEvents" (
-  "id" SERIAL PRIMARY KEY,
-  "studentid" int,
-  "eventid" int
-);
+ALTER TABLE "Tables" ADD FOREIGN KEY ("Type") REFERENCES "Types" ("Name");
 
 ALTER TABLE "Columns" ADD FOREIGN KEY ("tableID") REFERENCES "Tables" ("ID");
 
@@ -109,17 +82,3 @@ ALTER TABLE "Bus_Event" ADD FOREIGN KEY ("businessID") REFERENCES "Business" ("I
 ALTER TABLE "busToSec" ADD FOREIGN KEY ("businessID") REFERENCES "Business" ("ID");
 
 ALTER TABLE "busToSec" ADD FOREIGN KEY ("sectorID") REFERENCES "Sector" ("ID");
-
-ALTER TABLE "Schools" ADD FOREIGN KEY ("pointofContact_id") REFERENCES "School_POC" ("ID");
-
-ALTER TABLE "School_POC" ADD FOREIGN KEY ("schoolID") REFERENCES "Schools" ("ID");
-
-ALTER TABLE "School_POC" ADD FOREIGN KEY ("ID") REFERENCES "School_Event" ("PointofContactID");
-
-ALTER TABLE "School_Event" ADD FOREIGN KEY ("schoolID") REFERENCES "Schools" ("ID");
-
-ALTER TABLE "Students" ADD FOREIGN KEY ("schoolID") REFERENCES "Schools" ("ID");
-
-ALTER TABLE "stuEvents" ADD FOREIGN KEY ("studentid") REFERENCES "Students" ("ID");
-
-ALTER TABLE "stuEvents" ADD FOREIGN KEY ("eventid") REFERENCES "School_Event" ("ID");
