@@ -382,6 +382,7 @@ func getTable(typ string,tableName string,limit int, pageNum int, sortParam stri
 	body := makeQuery(toSend)
 	var result map[string]interface{}
 	json.Unmarshal([]byte(body), &result)
+	fmt.Println("HAHA",result)	
 	nameAndColumns := result["data"].(map[string]interface{})["Tables"].([]interface{})
 	
 	displayName := nameAndColumns[0].(map[string]interface{})["DisplayName"].(string)
@@ -578,6 +579,7 @@ func getTables() []tableNames{
 	body := makeQuery(toSend)
 	var result map[string]interface{}
 	json.Unmarshal([]byte(body), &result)
+	fmt.Println(result)
 	typesAndTabs := result["data"].(map[string]interface{})["Types"].([]interface{})
 	var tblTotal []tableNames
 
